@@ -2,7 +2,12 @@
 
 namespace App\Exceptions;
 
+use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -37,5 +42,25 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+    }
+
+    public function render($request, Throwable $exception)
+    {
+        $env = env('APP_ENV');
+
+        if($exception instanceof Exception) {
+            $message = $env === 'local' ? $exception->getMessage() : 'Internal server error';
+            return response()->json(['message' => $message], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        if($exception instanceof ModelNotFoundException || $exception instanceof NotFoundHttpException) {
+            $message = $env === 'local' ? $exception->getMessage() : 'No results found';
+            return response()->json(['message' => $message], Response::HTTP_NOT_FOUND);
+        }
+
+        if($exception instanceof QueryException) {
+            $message = $env === 'local' ? $exception->getMessage() : 'Internal server error';
+            return response()->json(['message' => $message], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

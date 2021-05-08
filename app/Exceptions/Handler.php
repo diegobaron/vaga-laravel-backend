@@ -3,11 +3,14 @@
 namespace App\Exceptions;
 
 use Exception;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-use Illuminate\Http\Response;
+use Illuminate\Database\Eloquent\InvalidCastException;
+use Illuminate\Database\Eloquent\JsonEncodingException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Illuminate\Database\Eloquent\RelationNotFoundException;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Response;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -44,23 +47,42 @@ class Handler extends ExceptionHandler
         });
     }
 
+    /**
+     * Render an exception into an HTTP response.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Throwable  $e
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Throwable
+     */
     public function render($request, Throwable $exception)
     {
         $env = env('APP_ENV');
+        $message = null;
+        $codeHttp = null;
 
-        if($exception instanceof Exception) {
+        if(
+            $exception instanceof Exception || 
+            $exception instanceof InvalidCastException ||
+            $exception instanceof QueryException || 
+            $exception instanceof JsonEncodingException
+        ) {
             $message = $env === 'local' ? $exception->getMessage() : 'Internal server error';
-            return response()->json(['message' => $message], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $codeHttp = Response::HTTP_INTERNAL_SERVER_ERROR;
         }
 
-        if($exception instanceof ModelNotFoundException || $exception instanceof NotFoundHttpException) {
+        if(
+            $exception instanceof ModelNotFoundException || 
+            $exception instanceof NotFoundHttpException || 
+            $exception instanceof RelationNotFoundException
+        ) {
             $message = $env === 'local' ? $exception->getMessage() : 'No results found';
-            return response()->json(['message' => $message], Response::HTTP_NOT_FOUND);
+            $codeHttp = Response::HTTP_NOT_FOUND;
         }
 
-        if($exception instanceof QueryException) {
-            $message = $env === 'local' ? $exception->getMessage() : 'Internal server error';
-            return response()->json(['message' => $message], Response::HTTP_INTERNAL_SERVER_ERROR);
+        if(!empty($message) && !empty($codeHttp)) {
+            return response()->json(['message' => $message], $codeHttp);
         }
     }
 }

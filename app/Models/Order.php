@@ -35,4 +35,14 @@ class Order extends Model
     protected $casts = [
         'client_id' => 'integer',
     ];
+
+    public function products()
+    {
+        return $this->hasMany(OrderProduct::class, 'order_id', 'id');
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class, 'client_id', 'id');
+    }
 }

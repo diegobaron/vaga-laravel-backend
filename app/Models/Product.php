@@ -27,4 +27,9 @@ class Product extends Model
         'unitary_value'
     ];
 
+    public function orderProducts()
+    {
+        return $this->hasMany(OrderProduct::class, 'product_id', 'id');
+    }
+
 }
